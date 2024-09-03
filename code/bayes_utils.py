@@ -22,7 +22,7 @@ def convert_to_dict(dependency_tuple: tuple) -> dict:
     """
     return {i:dependency_tuple[i] for i in range(len(dependency_tuple))}
 
-def simulation(data_size:int = 10, noise1:float = 0.2, noise2:float = 0.3, n:int = 100, dependency_dict: dict = {0:(), 1:(), 2:()}, algorithm:str = 'exact') -> float:
+def simulation(data_size = 10, noise1 = 0.2, noise2 = 0.3, n = 100, dependency_dict = dep, algorithm = 'exact'):
     """
     Simulate data and learn the structure of the Bayesian Network
     input: data_size, noise1, noise2, n, dependency_dict, algorithm
@@ -44,10 +44,11 @@ def simulation(data_size:int = 10, noise1:float = 0.2, noise2:float = 0.3, n:int
         v3 = np.random.randint(0,2, size = data_size)
         X = np.hstack([v0.reshape(-1,1), v1.reshape(-1,1), v2.reshape(-1,1), v3.reshape(-1,1)])
         struct = _learn_structure(X, algorithm = algorithm)
-        if struct == exp_struct:
-            correctness.append(1)
-        else:
-            correctness.append(0)
+        corr = 0
+        for i in range(len(struct)):
+            corr += int(struct[i] == exp_struct[i])
+        corr /= len(struct)
+        correctness.append(corr)
     return 100*np.mean(correctness)
 
 def visualize_BN(dependency_dict:dict = {0:(), 1:(), 2:()}, fig_name:str = 'BN.pdf') -> None:
