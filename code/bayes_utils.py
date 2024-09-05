@@ -21,7 +21,7 @@ def convert_to_dict(dependency_tuple: tuple) -> dict:
     """
     return {i:dependency_tuple[i] for i in range(len(dependency_tuple))}
 
-def convert_to_tuple(dependency_dict):
+def convert_to_tuple(dependency_dict)->tuple:
     """
     input: dictionary of dependencies (order does not matter)
     -------------------------------------------
@@ -47,16 +47,16 @@ def visualize_BN(dependency_dict:dict = {0:(), 1:(), 2:()}, fig_name:str = 'BN.p
 
     independent_nodes = [i for i in G.nodes if G.in_degree(i) == 0 and G.out_degree(i) == 0]
     plt.figure(figsize=(6, 4))
-    pos = nx.spring_layout(G, k=1, seed=5)
+    pos = nx.spring_layout(G, k=4, seed=9)
     nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=2000, font_size=15, font_weight='bold', arrowsize=20)
     nx.draw_networkx_nodes(G, pos, nodelist=independent_nodes, node_color='green', node_size=2000, alpha=0.6)
     nx.draw_networkx_edges(G, pos, arrowstyle='->', arrowsize=20)
     plt.margins(0.5)
-    plt.title("Dependence Structure Graph")
+    # plt.title("Dependence Structure Graph")
     plt.savefig(fig_name)
     plt.show()
 
-def topological_sort(dependency_dict):
+def topological_sort(dependency_dict)->list:
     """
     Topological sort of a directed acyclic graph (DAG) described by the dependency_dict
     input: dependency_dict
@@ -94,7 +94,7 @@ def topological_sort(dependency_dict):
 
     return topo_order
 
-def simulate_data(variables: list, dependency: dict, probs: dict, data_size: int):
+def simulate_data(variables: list, dependency: dict, probs: dict, data_size: int)->pd.DataFrame:
     """
     Simulate data based on the dependencies and probabilities
     input: variables, dependency, probs, data_size
@@ -121,7 +121,7 @@ def simulate_data(variables: list, dependency: dict, probs: dict, data_size: int
                 X[variables[key]][filter_condition] = [1 if np.random.rand() < probs[variables[key]][j][1] else 0 for i in range(filter_condition.sum())]
     return X
 
-def get_distribution(data:pd.DataFrame, variables:list, structure:tuple):
+def get_distribution(data:pd.DataFrame, variables:list, structure:tuple)->dict:
     """A function that returns the distribution of the variables in the Bayesian Network
     data: pandas DataFrame
     variables: list of variables in the Bayesian Network
@@ -151,7 +151,7 @@ def get_distribution(data:pd.DataFrame, variables:list, structure:tuple):
             dist[variables[i]] = p
     return dist
 
-def avg_kl(dist1:dict, dist2:dict, eps:float = 1e-6):
+def avg_kl(dist1:dict, dist2:dict, eps:float = 1e-6)->float:
     """
     A function that calculates the average KL divergence between two distributions
     dist1: dictionary of distributions
@@ -168,7 +168,7 @@ def avg_kl(dist1:dict, dist2:dict, eps:float = 1e-6):
                 dists += 1
     return kl_div/dists
 
-def simulation_auto(variables:list = variables_example, dependency:dict = dep_example, probs:dict = probs_example, n:int = n_example, data_sizes:list = data_sizes_example, output:str = 'kl'):
+def simulation_auto(variables:list = variables_example, dependency:dict = dep_example, probs:dict = probs_example, n:int = n_example, data_sizes:list = data_sizes_example, output:str = 'kl')->np.ndarray:
     """
     A function to simulate the network learning experiment and return the average KL divergence or accuracy of the Bayesian Network structure learning
     variables: list of variables in the Bayesian Network
@@ -205,7 +205,7 @@ def simulation_auto(variables:list = variables_example, dependency:dict = dep_ex
                 accs[data_sizes.index(data_size), i] = acc
         return 100*accs
     
-def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = variables_example, probs:dict = probs_example, dependency:dict = dep_example, n:int = 100, eps:float = 1e-10):
+def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = variables_example, probs:dict = probs_example, dependency:dict = dep_example, n:int = 100, eps:float = 1e-10)->np.ndarray:
     """
     data_sizes: list of data sizes
     variables: list of variables in the Bayesian Network
@@ -240,3 +240,36 @@ def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = v
                 prob_joint_model[j] = filter_condition.mean()
             joint_dist_div[data_sizes.index(d), i] = np.abs(entropy(np.array(list(prob_joint_data.values()))+eps, np.array(list(prob_joint_model.values()))+eps))
     return joint_dist_div
+
+def marginals_from_data(data: pd.DataFrame)->dict:
+    """
+    A function that returns the average KL divergence between marginal probabilities of the variables in the original data and the learned Bayesian Network's sampled data
+    data: pandas DataFrame
+    -------------------------------------------
+    output: average KL divergence
+    """
+    variables = list(data.columns)
+    prob_joint_model = {j:np.zeros((2**(len(variables)-1),2)) for j in variables}
+    for v in variables:
+        for j in range(2**(len(variables)-1)):
+            s = format(j, str(0)+str(len(variables)-1)+"b")
+            filter_condition = pd.Series([True] * len(data))
+            for col, condition in zip([pr for pr in list(set(variables)-{v})], [int(digit) for digit in s]):
+                filter_condition &= (data[col] == condition)
+            prob_joint_model[v][j][0] = 1 - filter_condition.mean()
+            prob_joint_model[v][j][1] = 1 - prob_joint_model[v][j][0]
+    return prob_joint_model
+
+def simulation_marginals(variables, dependency, probs, n, data_sizes, eps = 1e-10)->np.ndarray:
+    kl_divs = np.zeros((len(data_sizes), n))
+    for data_size in tqdm(data_sizes):
+        for j in range(n):
+            data = simulate_data(variables = variables, dependency = dependency, probs = probs, data_size = data_size)
+            prob_joint = marginals_from_data(data)
+            struct = _learn_structure(np.array(data, dtype = int))
+            model = BayesianNetwork(structure = struct)
+            model.fit(np.array(data, dtype = int))
+            data_model = pd.DataFrame(model.sample(n = data_size), columns = variables)
+            prob_joint_model = marginals_from_data(data_model)
+            kl_divs[data_sizes.index(data_size), j] = np.abs(entropy(prob_joint['E']+eps, prob_joint_model['E']+eps, axis = 1).mean())
+    return kl_divs
