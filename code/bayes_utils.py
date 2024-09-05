@@ -1,9 +1,27 @@
 import numpy as np
-import networkx as nx
-from pomegranate.bayesian_network import _learn_structure
 import matplotlib.pyplot as plt
+from pomegranate.bayesian_network import _learn_structure, BayesianNetwork
+import networkx as nx
+from tqdm import tqdm
+import pandas as pd
+from scipy.stats import entropy
+from collections import defaultdict, deque
 
-def convert_to_tuple(dependency_dict: dict) -> tuple:
+variables_example = ['E', 'B', 'A', 'R', 'C']
+dep_example = {0:(), 1:(), 2:(0,1), 3:(0,), 4:(2,)}
+probs_example = {'E': [0.01, 0.99], 'B': [0.8, 0.2], 'A': [[0.86, 0.14], [0.03, 0.97], [0.1, 0.9], [0.01, 0.99]], 'R': [[0.95, 0.05], [0.4, 0.6]], 'C': [[0.99, 0.01], [0.3, 0.7]]}
+data_sizes_example = [5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]
+n_example = 100
+
+def convert_to_dict(dependency_tuple: tuple) -> dict:
+    """
+    input: tuple of dependencies
+    -------------------------------------------
+    output: dictionary of dependencies
+    """
+    return {i:dependency_tuple[i] for i in range(len(dependency_tuple))}
+
+def convert_to_tuple(dependency_dict):
     """
     input: dictionary of dependencies (order does not matter)
     -------------------------------------------
@@ -14,43 +32,6 @@ def convert_to_tuple(dependency_dict: dict) -> tuple:
     tup =  [dependency_dict[key] for key in keys]
     return tuple(tup)
 
-def convert_to_dict(dependency_tuple: tuple) -> dict:
-    """
-    input: tuple of dependencies
-    -------------------------------------------
-    output: dictionary of dependencies
-    """
-    return {i:dependency_tuple[i] for i in range(len(dependency_tuple))}
-
-def simulation(data_size = 10, noise1 = 0.2, noise2 = 0.3, n = 100, dependency_dict = dep, algorithm = 'exact'):
-    """
-    Simulate data and learn the structure of the Bayesian Network
-    input: data_size, noise1, noise2, n, dependency_dict, algorithm
-    data_size: number of samples to generate
-    noise1: noise level for the first variable
-    noise2: noise level for the second variable
-    n: number of simulations
-    dependency_dict: dictionary of dependencies
-    algorithm: algorithm to learn the structure
-    -------------------------------------------
-    output: accuracy of the learned structure
-    """
-    exp_struct = convert_to_tuple(dependency_dict)
-    correctness = []
-    for i in range(n):
-        v0 = np.random.randint(0,2, size = data_size)
-        v1 = np.array([v0[i] if np.random.rand() > noise1 else 1-v0[i] for i in range(len(v0))])
-        v2 = np.array([v0[i]*v1[i] if np.random.rand() > noise2 else 1-v0[i]*v1[i] for i in range(len(v0))])
-        v3 = np.random.randint(0,2, size = data_size)
-        X = np.hstack([v0.reshape(-1,1), v1.reshape(-1,1), v2.reshape(-1,1), v3.reshape(-1,1)])
-        struct = _learn_structure(X, algorithm = algorithm)
-        corr = 0
-        for i in range(len(struct)):
-            corr += int(struct[i] == exp_struct[i])
-        corr /= len(struct)
-        correctness.append(corr)
-    return 100*np.mean(correctness)
-
 def visualize_BN(dependency_dict:dict = {0:(), 1:(), 2:()}, fig_name:str = 'BN.pdf') -> None:
     """
     input: dictionary of dependencies
@@ -59,18 +40,167 @@ def visualize_BN(dependency_dict:dict = {0:(), 1:(), 2:()}, fig_name:str = 'BN.p
     """
     dependencies = convert_to_tuple(dependency_dict)
     G = nx.DiGraph()
-    G.add_nodes_from(range(len(dependencies)))
-    for i, dep in enumerate(dependencies):
-        for j in dep:
-            G.add_edge(j, i)
+    G.add_nodes_from(dependency_dict)
+    for node, parents in dependency_dict.items():
+      for p in parents:
+        G.add_edge(p, node)
 
     independent_nodes = [i for i in G.nodes if G.in_degree(i) == 0 and G.out_degree(i) == 0]
     plt.figure(figsize=(6, 4))
     pos = nx.spring_layout(G, k=1, seed=5)
     nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=2000, font_size=15, font_weight='bold', arrowsize=20)
-    nx.draw_networkx_nodes(G, pos, nodelist=independent_nodes, node_color='green', node_size=2000, alpha=0.6)    
+    nx.draw_networkx_nodes(G, pos, nodelist=independent_nodes, node_color='green', node_size=2000, alpha=0.6)
     nx.draw_networkx_edges(G, pos, arrowstyle='->', arrowsize=20)
     plt.margins(0.5)
     plt.title("Dependence Structure Graph")
     plt.savefig(fig_name)
     plt.show()
+
+def topological_sort(dependency_dict):
+    """
+    Topological sort of a directed acyclic graph (DAG) described by the dependency_dict
+    input: dependency_dict
+    -------------------------------------------
+    output: topological order of the nodes
+    """
+    in_degree = defaultdict(int)
+    for node in dependency_dict:
+        if node not in in_degree:
+            in_degree[node] = 0
+        for parent in dependency_dict[node]:
+            in_degree[node] += 1
+            if parent not in in_degree:
+                in_degree[parent] = 0
+
+    # Collect nodes with no incoming edges
+    zero_in_degree_queue = deque([node for node in in_degree if in_degree[node] == 0])
+    
+    topo_order = []
+
+    while zero_in_degree_queue:
+        node = zero_in_degree_queue.popleft()
+        topo_order.append(node)
+
+        # Reduce in-degree for all its neighbors
+        for neighbor in dependency_dict:
+            if node in dependency_dict[neighbor]:
+                in_degree[neighbor] -= 1
+                if in_degree[neighbor] == 0:
+                    zero_in_degree_queue.append(neighbor)
+
+    # Check if there's a cycle (incomplete topological sorting)
+    if len(topo_order) != len(in_degree):
+        raise ValueError("The graph is not a DAG; it contains a cycle.")
+
+    return topo_order
+
+def simulate_data(variables: list, dependency: dict, probs: dict, data_size: int):
+    """
+    Simulate data based on the dependencies and probabilities
+    input: variables, dependency, probs, data_size
+    variables: list of variables
+    dependency: dictionary of dependencies
+    probs: dictionary of probabilities
+    data_size: number of samples
+    -------------------------------------------
+    output: simulated data
+    """
+    ordering = topological_sort(dependency)
+    X = np.zeros((data_size, len(variables)))
+    X = pd.DataFrame(X, columns = variables)
+    for key in ordering:
+        if len(dependency[key]) == 0:
+            X[variables[key]] = [1 if np.random.rand() < probs[variables[key]][1] else 0 for i in range(data_size)]
+        elif len(dependency[key]) > 0:
+            parents = dependency[key]
+            for j in range(2**len(parents)):
+                s = format(j, str(0)+str(len(parents))+"b")
+                filter_condition = pd.Series([True] * len(X))
+                for col, condition in zip([variables[pr] for pr in parents], [int(digit) for digit in s]):
+                    filter_condition &= (X[col] == condition)
+                X[variables[key]][filter_condition] = [1 if np.random.rand() < probs[variables[key]][j][1] else 0 for i in range(filter_condition.sum())]
+    return X
+
+def get_distribution(data:pd.DataFrame, variables:list, structure:tuple):
+    """A function that returns the distribution of the variables in the Bayesian Network
+    data: pandas DataFrame
+    variables: list of variables in the Bayesian Network
+    structure: tuple of parents of each variable in the Bayesian Network
+    """
+    dist = {x:None for x in variables}
+    for i in range(len(structure)):
+        if len(structure[i]) == 0:
+            p = np.array([1 - data[variables[i]].mean(), data[variables[i]].mean()])
+            p = p.reshape((2**len(structure[i]), 2))
+            dist[variables[i]] = p
+        else:
+            parents = [variables[k] for k in structure[i]]
+            p = np.zeros((2**len(parents), 2))
+            for j in range(2**len(parents)):
+                s = format(j, str(0)+str(len(parents))+"b")
+                filter_condition = pd.Series([True] * len(data))
+                for col, condition in zip(parents, [int(digit) for digit in s]):
+                    filter_condition &= (data[col] == condition)
+                if len(data[filter_condition])>0:
+                    p[j, 0] = 1 - data[filter_condition][variables[i]].mean()
+                    p[j, 1] = data[filter_condition][variables[i]].mean()
+                else:
+                    p[j, 0] = np.random.rand()
+                    p[j, 1] = 1 - p[j, 0]
+            p = p.reshape((2**len(parents), 2))
+            dist[variables[i]] = p
+    return dist
+
+def avg_kl(dist1:dict, dist2:dict, eps:float = 1e-6):
+    """
+    A function that calculates the average KL divergence between two distributions
+    dist1: dictionary of distributions
+    dist2: dictionary of distributions
+    eps: small number to avoid division by zero
+
+    """
+    kl_div = 0
+    dists = 0
+    for key in dist1.keys():
+        if dist1[key].shape[0] == dist2[key].shape[0]:    
+            for i in range(dist1[key].shape[0]):
+                kl_div += np.abs(entropy(dist1[key][i]+eps, dist2[key][i]+eps))
+                dists += 1
+    return kl_div/dists
+
+def simulation_auto(variables:list = variables_example, dependency:dict = dep_example, probs:dict = probs_example, n:int = n_example, data_sizes:list = data_sizes_example, output:str = 'kl'):
+    """
+    A function to simulate the network learning experiment and return the average KL divergence or accuracy of the Bayesian Network structure learning
+    variables: list of variables in the Bayesian Network
+    dependency: dictionary of dependencies
+    probs: dictionary of probabilities
+    n: number of iterations
+    data_sizes: list of data sizes
+    output: 'kl' or 'accuracy'
+    """
+    if output == 'kl':
+        kl_divs = np.zeros((len(data_sizes), n))
+        for data_size in tqdm(data_sizes):
+            for i in range(n):
+                data = simulate_data(variables=variables, dependency=dependency, probs=probs, data_size=data_size)
+                struct = _learn_structure(np.array(data, dtype = int))
+                dist_data = get_distribution(data, variables, struct)
+
+                model = BayesianNetwork(structure=struct)
+                model.fit(np.array(data, dtype=int))
+                dist_model = {x:None for x in variables}
+                for k in range(len(variables)):
+                    sh = list(model.distributions[k].parameters())[1].shape
+                    dist_model[variables[k]] = list(model.distributions[k].parameters())[1].reshape(np.product(sh[:-1]), sh[-1])
+
+                kl_divs[data_sizes.index(data_size), i] = avg_kl(dist_data, dist_model)
+        return kl_divs
+    elif output == 'accuracy':
+        accs = np.zeros((len(data_sizes), n))
+        for data_size in tqdm(data_sizes):
+            for i in range(n):
+                data = simulate_data(variables=variables, dependency=dependency, probs=probs, data_size=data_size)
+                struct = _learn_structure(np.array(data, dtype = int))
+                acc = np.mean([struct[i] == dependency[i] for i in range(len(struct))])
+                accs[data_sizes.index(data_size), i] = acc
+        return 100*accs
