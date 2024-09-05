@@ -204,3 +204,31 @@ def simulation_auto(variables:list = variables_example, dependency:dict = dep_ex
                 acc = np.mean([struct[i] == dependency[i] for i in range(len(struct))])
                 accs[data_sizes.index(data_size), i] = acc
         return 100*accs
+    
+def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = variables_example, probs:dict = probs_example, dependency:dict = dep_example, n:int = 100, eps:float = 1e-10):
+    joint_dist_div = np.zeros((len(data_sizes), n))
+    for d in tqdm(data_sizes):
+        for i in range(n):
+            data = simulate_data(variables = variables, dependency = dependency, probs = probs, data_size = d)
+            prob_joint_data = {j:0 for j in range(2**len(variables))}
+            for j in range(2**len(variables)):
+                s = format(j, str(0)+str(len(variables))+"b")
+                filter_condition = pd.Series([True] * len(data))
+                for col, condition in zip([pr for pr in variables], [int(digit) for digit in s]):
+                    filter_condition &= (data[col] == condition)
+                prob_joint_data[j] = filter_condition.mean()
+
+            struct = _learn_structure(np.array(data, dtype=int))
+            model = BayesianNetwork(structure = struct)
+            model.fit(np.array(data, dtype=int))
+
+            data_model = pd.DataFrame(model.sample(n=d), columns = variables)
+            prob_joint_model = {j:0 for j in range(2**len(variables))}
+            for j in range(2**len(variables)):
+                s = format(j, str(0)+str(len(variables))+"b")
+                filter_condition = pd.Series([True] * len(data_model))
+                for col, condition in zip([pr for pr in variables], [int(digit) for digit in s]):
+                    filter_condition &= (data_model[col] == condition)
+                prob_joint_model[j] = filter_condition.mean()
+            joint_dist_div[data_sizes.index(d), i] = np.abs(entropy(np.array(list(prob_joint_data.values()))+eps, np.array(list(prob_joint_model.values()))+eps))
+    return joint_dist_div
