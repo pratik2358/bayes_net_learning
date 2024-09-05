@@ -206,6 +206,14 @@ def simulation_auto(variables:list = variables_example, dependency:dict = dep_ex
         return 100*accs
     
 def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = variables_example, probs:dict = probs_example, dependency:dict = dep_example, n:int = 100, eps:float = 1e-10):
+    """
+    data_sizes: list of data sizes
+    variables: list of variables in the Bayesian Network
+    probs: dictionary of probabilities
+    dependency: dictionary of dependencies
+    n: number of iterations
+    eps: small number to avoid division by zero
+    """
     joint_dist_div = np.zeros((len(data_sizes), n))
     for d in tqdm(data_sizes):
         for i in range(n):
