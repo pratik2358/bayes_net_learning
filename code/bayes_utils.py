@@ -32,7 +32,7 @@ def convert_to_tuple(dependency_dict)->tuple:
     tup =  [dependency_dict[key] for key in keys]
     return tuple(tup)
 
-def visualize_BN(dependency_dict:dict = {0:(), 1:(), 2:()}, fig_name:str = 'BN.pdf') -> None:
+def visualize_BN(dependency_dict:dict = {0:(), 1:(), 2:()}, color = 'c', fig_name:str = 'BN.pdf') -> None:
     """
     input: dictionary of dependencies
     -------------------------------------------
@@ -48,8 +48,8 @@ def visualize_BN(dependency_dict:dict = {0:(), 1:(), 2:()}, fig_name:str = 'BN.p
     independent_nodes = [i for i in G.nodes if G.in_degree(i) == 0 and G.out_degree(i) == 0]
     plt.figure(figsize=(6, 4))
     pos = nx.spring_layout(G, k=4, seed=9)
-    nx.draw(G, pos, with_labels=True, node_color='lightblue', node_size=2000, font_size=15, font_weight='bold', arrowsize=20)
-    nx.draw_networkx_nodes(G, pos, nodelist=independent_nodes, node_color='green', node_size=2000, alpha=0.6)
+    nx.draw(G, pos, with_labels=True, node_color=color, node_size=2000, font_size=15, font_weight='bold', arrowsize=20)
+    nx.draw_networkx_nodes(G, pos, nodelist=independent_nodes, node_color='orange', node_size=2000, alpha=0.6)
     nx.draw_networkx_edges(G, pos, arrowstyle='->', arrowsize=20)
     plt.margins(0.5)
     # plt.title("Dependence Structure Graph")
@@ -168,7 +168,7 @@ def avg_kl(dist1:dict, dist2:dict, eps:float = 1e-6)->float:
                 dists += 1
     return kl_div/dists
 
-def simulation_auto(variables:list = variables_example, dependency:dict = dep_example, probs:dict = probs_example, n:int = n_example, data_sizes:list = data_sizes_example, output:str = 'kl')->np.ndarray:
+def simulation_auto(variables:list = variables_example, dependency:dict = dep_example, probs:dict = probs_example, n:int = n_example, data_sizes:list = data_sizes_example, output:str = 'kl', algorithm:str = 'exact')->np.ndarray:
     """
     A function to simulate the network learning experiment and return the average KL divergence or accuracy of the Bayesian Network structure learning
     variables: list of variables in the Bayesian Network
@@ -177,13 +177,14 @@ def simulation_auto(variables:list = variables_example, dependency:dict = dep_ex
     n: number of iterations
     data_sizes: list of data sizes
     output: 'kl' or 'accuracy'
+    algorithm: 'exact' or 'chow-liu' used for learning the structure
     """
     if output == 'kl':
         kl_divs = np.zeros((len(data_sizes), n))
         for data_size in tqdm(data_sizes):
             for i in range(n):
                 data = simulate_data(variables=variables, dependency=dependency, probs=probs, data_size=data_size)
-                struct = _learn_structure(np.array(data, dtype = int))
+                struct = _learn_structure(np.array(data, dtype = int), algorithm = algorithm)
                 dist_data = get_distribution(data, variables, struct)
 
                 model = BayesianNetwork(structure=struct)
@@ -200,12 +201,12 @@ def simulation_auto(variables:list = variables_example, dependency:dict = dep_ex
         for data_size in tqdm(data_sizes):
             for i in range(n):
                 data = simulate_data(variables=variables, dependency=dependency, probs=probs, data_size=data_size)
-                struct = _learn_structure(np.array(data, dtype = int))
+                struct = _learn_structure(np.array(data, dtype = int), algorithm = algorithm)
                 acc = np.mean([struct[i] == dependency[i] for i in range(len(struct))])
                 accs[data_sizes.index(data_size), i] = acc
         return 100*accs
     
-def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = variables_example, probs:dict = probs_example, dependency:dict = dep_example, n:int = 100, eps:float = 1e-10)->np.ndarray:
+def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = variables_example, probs:dict = probs_example, dependency:dict = dep_example, n:int = 100, eps:float = 1e-10, algorithm:str = 'exact')->np.ndarray:
     """
     data_sizes: list of data sizes
     variables: list of variables in the Bayesian Network
@@ -213,6 +214,7 @@ def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = v
     dependency: dictionary of dependencies
     n: number of iterations
     eps: small number to avoid division by zero
+    algorithm: 'exact' or 'chow-liu' used for learning the structure
     """
     joint_dist_div = np.zeros((len(data_sizes), n))
     for d in tqdm(data_sizes):
@@ -226,7 +228,7 @@ def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = v
                     filter_condition &= (data[col] == condition)
                 prob_joint_data[j] = filter_condition.mean()
 
-            struct = _learn_structure(np.array(data, dtype=int))
+            struct = _learn_structure(np.array(data, dtype=int), algorithm = algorithm)
             model = BayesianNetwork(structure = struct)
             model.fit(np.array(data, dtype=int))
 
@@ -260,13 +262,23 @@ def marginals_from_data(data: pd.DataFrame)->dict:
             prob_joint_model[v][j][1] = 1 - prob_joint_model[v][j][0]
     return prob_joint_model
 
-def simulation_marginals(variables, dependency, probs, n, data_sizes, eps = 1e-10)->np.ndarray:
+def simulation_marginals(variables:list = variables_example, dependency:dict = dep_example, probs:dict = probs_example, n:int = n_example, data_sizes:list = data_sizes_example, eps:float = 1e-10, algorithm:str = 'exact')->np.ndarray:
+    """
+    A function that returns the average KL divergence between marginal probabilities of the variables in the original data and the learned Bayesian Network's sampled data
+    variables: list of variables in the Bayesian Network
+    dependency: dictionary of dependencies
+    probs: dictionary of probabilities
+    n: number of iterations
+    data_sizes: list of data sizes
+    eps: small number to avoid division by zero
+    algorithm: 'exact' or 'chow-liu' used for learning the structure
+    """
     kl_divs = np.zeros((len(data_sizes), n))
     for data_size in tqdm(data_sizes):
         for j in range(n):
             data = simulate_data(variables = variables, dependency = dependency, probs = probs, data_size = data_size)
             prob_joint = marginals_from_data(data)
-            struct = _learn_structure(np.array(data, dtype = int))
+            struct = _learn_structure(np.array(data, dtype = int), algorithm = algorithm)
             model = BayesianNetwork(structure = struct)
             model.fit(np.array(data, dtype = int))
             data_model = pd.DataFrame(model.sample(n = data_size), columns = variables)
