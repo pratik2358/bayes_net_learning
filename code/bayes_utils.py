@@ -245,9 +245,9 @@ def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = v
             joint_dist_div[data_sizes.index(d), i] = np.abs(entropy(np.array(list(prob_joint_data.values()))+eps, np.array(list(prob_joint_model.values()))+eps))
     return joint_dist_div
 
-def marginals_from_data(data: pd.DataFrame)->dict:
+def conditionals_from_data(data: pd.DataFrame)->dict:
     """
-    A function that returns the average KL divergence between marginal probabilities of the variables in the original data and the learned Bayesian Network's sampled data
+    A function that returns the average KL divergence between conditional probabilities of the variables in the original data and the learned Bayesian Network's sampled data
     data: pandas DataFrame
     -------------------------------------------
     output: average KL divergence
@@ -264,9 +264,9 @@ def marginals_from_data(data: pd.DataFrame)->dict:
             prob_joint_model[v][j][1] = 1 - prob_joint_model[v][j][0]
     return prob_joint_model
 
-def simulation_marginals(variables:list = variables_example, dependency:dict = dep_example, probs:dict = probs_example, n:int = n_example, data_sizes:list = data_sizes_example, eps:float = 1e-10, algorithm:str = 'exact', max_parents:int = None)->np.ndarray:
+def simulation_conditionals(variables:list = variables_example, dependency:dict = dep_example, probs:dict = probs_example, n:int = n_example, data_sizes:list = data_sizes_example, eps:float = 1e-10, algorithm:str = 'exact', max_parents:int = None)->np.ndarray:
     """
-    A function that returns the average KL divergence between marginal probabilities of the variables in the original data and the learned Bayesian Network's sampled data
+    A function that returns the average KL divergence between conditional probabilities of the variables in the original data and the learned Bayesian Network's sampled data
     variables: list of variables in the Bayesian Network
     dependency: dictionary of dependencies
     probs: dictionary of probabilities
@@ -280,11 +280,11 @@ def simulation_marginals(variables:list = variables_example, dependency:dict = d
     for data_size in tqdm(data_sizes):
         for j in range(n):
             data = simulate_data(variables = variables, dependency = dependency, probs = probs, data_size = data_size)
-            prob_joint = marginals_from_data(data)
+            prob_joint = conditionals_from_data(data)
             struct = _learn_structure(np.array(data, dtype = int), algorithm = algorithm, max_parents = max_parents)
             model = BayesianNetwork(structure = struct)
             model.fit(np.array(data, dtype = int))
             data_model = pd.DataFrame(model.sample(n = data_size), columns = variables)
-            prob_joint_model = marginals_from_data(data_model)
+            prob_joint_model = conditionals_from_data(data_model)
             kl_divs[data_sizes.index(data_size), j] = np.abs(entropy(prob_joint['E']+eps, prob_joint_model['E']+eps, axis = 1).mean())
     return kl_divs
