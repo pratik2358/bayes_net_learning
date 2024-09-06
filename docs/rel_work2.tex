@@ -1,0 +1,14 @@
+\section{Related Works}
+Bayesian Network (BN) structure learning has been a significant topic in machine learning and artificial intelligence since its early introduction by Pearl~\cite{pearl1985bayesian} and others in the mid-1980s, where BNs were proposed as a framework for evidential reasoning and memory modeling . Over the years, substantial advancements have been made in both the theoretical underpinnings and practical implementations of BN learning algorithms.
+
+Research on BN structure learning with continuous variables extended the initial focus on discrete variables, laying the groundwork for handling real-world applications where both types of variables are present. Moreover, methods to find the optimal BN structures, such as Perrier et al.'s~\cite{perrier2008finding} approach of utilizing a super-structure , advanced the ability to handle more complex networks efficiently.
+
+Chickering's algorithm~\cite{silander2012simple} offered a simple but effective approach for finding globally optimal BN structures, marking a milestone in scalable algorithms . Complementing this, Peters et al.~\cite{peters2015structural} introduced the concept of structural intervention distance (SID), a metric for evaluating causal graphs by measuring differences between them, offering an innovative way to assess learned structures .
+
+With the rise of high-dimensional data, algorithms such as the Fast Greedy Equivalence Search (FGES) were developed to handle massive datasets like fMRI, scaling BN learning to millions of variables . Meanwhile, the BDeu scoring function has seen rigorous theoretical analysis to understand its behavior and limitations in structure learning .
+
+Several improvements in structure learning algorithms have been suggested to enhance both accuracy and scalability. Ramsey et al.~\cite{ramsey2016improving} presented an improved PC algorithm that enhances performance by maximizing p-values during structure search . The accuracy and efficiency of these algorithms were further benchmarked by studies comparing public causal search packages and advancing greedy search methods .
+
+More recent surveys~\cite{scanagatta2019survey, kitson2023survey} have provided comprehensive overviews of state-of-the-art algorithms in BN structure learning, analyzing performance trade-offs in terms of speed, scalability, and structural accuracy. These surveys emphasize the need for balancing computational efficiency with the quality of learned networks, particularly as datasets grow larger and more complex.
+
+This body of work highlights the evolution of BN structure learning algorithms and motivates our investigation into how data quantity affects structure learning performance across different algorithms, providing insights into both theoretical and practical improvements.
