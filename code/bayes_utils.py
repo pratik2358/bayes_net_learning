@@ -157,7 +157,6 @@ def avg_kl(dist1:dict, dist2:dict, eps:float = 1e-6)->float:
     dist1: dictionary of distributions
     dist2: dictionary of distributions
     eps: small number to avoid division by zero
-
     """
     kl_div = 0
     dists = 0
@@ -178,7 +177,7 @@ def simulation_auto(variables:list = variables_example, dependency:dict = dep_ex
     data_sizes: list of data sizes
     output: 'kl' or 'accuracy'
     algorithm: 'exact' or 'chow-liu' used for learning the structure
-    max_parents: maximum number of parents for each variable
+    max_parents: maximum number of parents for each variable (for 'exact' algorithm only)
     """
     if output == 'kl':
         kl_divs = np.zeros((len(data_sizes), n))
@@ -216,7 +215,7 @@ def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = v
     n: number of iterations
     eps: small number to avoid division by zero
     algorithm: 'exact' or 'chow-liu' used for learning the structure
-    max_parents: maximum number of parents for each variable
+    max_parents: maximum number of parents for each variable (for 'exact' algorithm only)
     """
     joint_dist_div = np.zeros((len(data_sizes), n))
     for d in tqdm(data_sizes):
@@ -274,7 +273,7 @@ def simulation_conditionals(variables:list = variables_example, dependency:dict 
     data_sizes: list of data sizes
     eps: small number to avoid division by zero
     algorithm: 'exact' or 'chow-liu' used for learning the structure
-    max_parents: maximum number of parents for each variable
+    max_parents: maximum number of parents for each variable (for 'exact' algorithm only)
     """
     kl_divs = np.zeros((len(data_sizes), n))
     for data_size in tqdm(data_sizes):
