@@ -42,7 +42,7 @@ def visualize_BN(dependency_dict:dict = {0:(), 1:(), 2:()}, color = 'c', seed:in
     -------------------------------------------
     output: plot of the Bayesian Network
     """
-    dependencies = convert_to_tuple(dependency_dict)
+    # dependencies = convert_to_tuple(dependency_dict)
     G = nx.DiGraph()
     G.add_nodes_from(dependency_dict)
     for node, parents in dependency_dict.items():
