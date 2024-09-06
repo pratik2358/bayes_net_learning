@@ -32,9 +32,13 @@ def convert_to_tuple(dependency_dict)->tuple:
     tup =  [dependency_dict[key] for key in keys]
     return tuple(tup)
 
-def visualize_BN(dependency_dict:dict = {0:(), 1:(), 2:()}, color = 'c', fig_name:str = 'BN.pdf') -> None:
+def visualize_BN(dependency_dict:dict = {0:(), 1:(), 2:()}, color = 'c', seed:int = 9, k:int = 4, fig_name:str = 'BN.pdf') -> None:
     """
     input: dictionary of dependencies
+    color: color of the nodes
+    seed: random seed for the DAG layout
+    k: spring layout parameter
+    fig_name: name of the output figure
     -------------------------------------------
     output: plot of the Bayesian Network
     """
@@ -46,14 +50,14 @@ def visualize_BN(dependency_dict:dict = {0:(), 1:(), 2:()}, color = 'c', fig_nam
         G.add_edge(p, node)
 
     independent_nodes = [i for i in G.nodes if G.in_degree(i) == 0 and G.out_degree(i) == 0]
-    plt.figure(figsize=(6, 4))
-    pos = nx.spring_layout(G, k=4, seed=9)
+    plt.figure(figsize=(4, 4))
+    pos = nx.spring_layout(G, k=k, seed=seed)
     nx.draw(G, pos, with_labels=True, node_color=color, node_size=2000, font_size=15, font_weight='bold', arrowsize=20)
-    nx.draw_networkx_nodes(G, pos, nodelist=independent_nodes, node_color='orange', node_size=2000, alpha=0.6)
+    nx.draw_networkx_nodes(G, pos, nodelist=independent_nodes, node_color='orange', node_size=10000, alpha=0.6)
     nx.draw_networkx_edges(G, pos, arrowstyle='->', arrowsize=20)
-    plt.margins(0.5)
+    plt.margins(0.2)
     # plt.title("Dependence Structure Graph")
-    plt.savefig(fig_name)
+    plt.savefig(fig_name, bbox_inches='tight')
     plt.show()
 
 def topological_sort(dependency_dict)->list:
