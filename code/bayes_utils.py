@@ -168,7 +168,7 @@ def avg_kl(dist1:dict, dist2:dict, eps:float = 1e-6)->float:
                 dists += 1
     return kl_div/dists
 
-def simulation_auto(variables:list = variables_example, dependency:dict = dep_example, probs:dict = probs_example, n:int = n_example, data_sizes:list = data_sizes_example, output:str = 'kl', algorithm:str = 'exact')->np.ndarray:
+def simulation_auto(variables:list = variables_example, dependency:dict = dep_example, probs:dict = probs_example, n:int = n_example, data_sizes:list = data_sizes_example, output:str = 'kl', algorithm:str = 'exact', max_parents:int = None)->np.ndarray:
     """
     A function to simulate the network learning experiment and return the average KL divergence or accuracy of the Bayesian Network structure learning
     variables: list of variables in the Bayesian Network
@@ -178,13 +178,14 @@ def simulation_auto(variables:list = variables_example, dependency:dict = dep_ex
     data_sizes: list of data sizes
     output: 'kl' or 'accuracy'
     algorithm: 'exact' or 'chow-liu' used for learning the structure
+    max_parents: maximum number of parents for each variable
     """
     if output == 'kl':
         kl_divs = np.zeros((len(data_sizes), n))
         for data_size in tqdm(data_sizes):
             for i in range(n):
                 data = simulate_data(variables=variables, dependency=dependency, probs=probs, data_size=data_size)
-                struct = _learn_structure(np.array(data, dtype = int), algorithm = algorithm)
+                struct = _learn_structure(np.array(data, dtype = int), algorithm = algorithm, max_parents = max_parents)
                 dist_data = get_distribution(data, variables, struct)
 
                 model = BayesianNetwork(structure=struct)
@@ -201,12 +202,12 @@ def simulation_auto(variables:list = variables_example, dependency:dict = dep_ex
         for data_size in tqdm(data_sizes):
             for i in range(n):
                 data = simulate_data(variables=variables, dependency=dependency, probs=probs, data_size=data_size)
-                struct = _learn_structure(np.array(data, dtype = int), algorithm = algorithm)
+                struct = _learn_structure(np.array(data, dtype = int), algorithm = algorithm, max_parents = max_parents)
                 acc = np.mean([struct[i] == dependency[i] for i in range(len(struct))])
                 accs[data_sizes.index(data_size), i] = acc
         return 100*accs
     
-def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = variables_example, probs:dict = probs_example, dependency:dict = dep_example, n:int = 100, eps:float = 1e-10, algorithm:str = 'exact')->np.ndarray:
+def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = variables_example, probs:dict = probs_example, dependency:dict = dep_example, n:int = 100, eps:float = 1e-10, algorithm:str = 'exact', max_parents:int = None)->np.ndarray:
     """
     data_sizes: list of data sizes
     variables: list of variables in the Bayesian Network
@@ -215,6 +216,7 @@ def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = v
     n: number of iterations
     eps: small number to avoid division by zero
     algorithm: 'exact' or 'chow-liu' used for learning the structure
+    max_parents: maximum number of parents for each variable
     """
     joint_dist_div = np.zeros((len(data_sizes), n))
     for d in tqdm(data_sizes):
@@ -228,7 +230,7 @@ def simulate_joint_dist(data_sizes:list = data_sizes_example, variables:list = v
                     filter_condition &= (data[col] == condition)
                 prob_joint_data[j] = filter_condition.mean()
 
-            struct = _learn_structure(np.array(data, dtype=int), algorithm = algorithm)
+            struct = _learn_structure(np.array(data, dtype=int), algorithm = algorithm, max_parents = max_parents)
             model = BayesianNetwork(structure = struct)
             model.fit(np.array(data, dtype=int))
 
@@ -262,7 +264,7 @@ def marginals_from_data(data: pd.DataFrame)->dict:
             prob_joint_model[v][j][1] = 1 - prob_joint_model[v][j][0]
     return prob_joint_model
 
-def simulation_marginals(variables:list = variables_example, dependency:dict = dep_example, probs:dict = probs_example, n:int = n_example, data_sizes:list = data_sizes_example, eps:float = 1e-10, algorithm:str = 'exact')->np.ndarray:
+def simulation_marginals(variables:list = variables_example, dependency:dict = dep_example, probs:dict = probs_example, n:int = n_example, data_sizes:list = data_sizes_example, eps:float = 1e-10, algorithm:str = 'exact', max_parents:int = None)->np.ndarray:
     """
     A function that returns the average KL divergence between marginal probabilities of the variables in the original data and the learned Bayesian Network's sampled data
     variables: list of variables in the Bayesian Network
@@ -272,13 +274,14 @@ def simulation_marginals(variables:list = variables_example, dependency:dict = d
     data_sizes: list of data sizes
     eps: small number to avoid division by zero
     algorithm: 'exact' or 'chow-liu' used for learning the structure
+    max_parents: maximum number of parents for each variable
     """
     kl_divs = np.zeros((len(data_sizes), n))
     for data_size in tqdm(data_sizes):
         for j in range(n):
             data = simulate_data(variables = variables, dependency = dependency, probs = probs, data_size = data_size)
             prob_joint = marginals_from_data(data)
-            struct = _learn_structure(np.array(data, dtype = int), algorithm = algorithm)
+            struct = _learn_structure(np.array(data, dtype = int), algorithm = algorithm, max_parents = max_parents)
             model = BayesianNetwork(structure = struct)
             model.fit(np.array(data, dtype = int))
             data_model = pd.DataFrame(model.sample(n = data_size), columns = variables)
