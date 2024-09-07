@@ -1,4 +1,4 @@
-# Bayes Net learning from data
+# Bayesian Network learning from data
 Related Work:
 1. [Approximating discrete probability distributions with dependence trees (1968)](https://cs.nyu.edu/~roweis/csc2515-2006/readings/chowliu.pdf)
 2. [Bayesian networks: A model of self-activated memory for evidential reasoning (1985)](https://ftp.cs.ucla.edu/pub/stat_ser/r43-1985.pdf)
