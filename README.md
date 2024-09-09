@@ -26,5 +26,5 @@ Related Work:
 24. [A survey of Bayesian Network structure learning (2023)](https://link.springer.com/content/pdf/10.1007/s10462-022-10351-w.pdf)
 25. [Optimal estimation of Gaussian (poly)trees (2024)](https://arxiv.org/pdf/2402.06380)
 
-Package to explore:
+Packages to explore:
 1. [Tetrad](https://www.cmu.edu/dietrich/philosophy/tetrad/educational-materials/technical-details/code-repositories.html)
