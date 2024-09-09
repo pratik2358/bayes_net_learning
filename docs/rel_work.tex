@@ -1,11 +1,25 @@
 \section{Related Works}
-\paragraph*{What to write}
-\begin{itemize}
-    \item Where did it start and how? - 2-3 sentences along with necessary references.
-    \item Once Bayes net was introduced, what were the initial challenges? Cite proper works.
-    \item How have researchers addressed the challenges? Cite proper works.
-    \item If there exists no proper solution to some of the challenges yet, why? Cite proper works.
-\end{itemize}
+% \paragraph*{What to write}
+% \begin{itemize}
+    % \item Where did it start and how? - 2-3 sentences along with necessary references.
+    % \item Once Bayes net was introduced, what were the initial challenges? Cite proper works. %(complexity:Cooper, also check Chickering 2014, continuous variables: shachter 1989 the first one to solve for multivariate Gaussian/ Gaussian mixture distribution, heckerman 1996 combining both continuous and discrete variable in the same model, wang, fernandez 2013 discretize continuous variables, user knowledge available or not: algo combining expert + data (Heckerman 1985 user prior network, confidence for that network +  data) and algo only using data, missing data: Friedman 1998, dealing with measurement error: Scheines Ramsey 2016, Zhang & al 2018, Blom & al 2018 correction using upper bound of variance of measurement error with linear Gaussian models)
+    % \item How have researchers addressed the challenges? Cite proper works.
+    % \item If there exists no proper solution to some of the challenges yet, why? Cite proper works.
+% \end{itemize}
 
-\paragraph*{Example citation}
-The survey papers by Kitson et al.~\cite{kitson2023survey} and Scanagatta et al.~\cite{scanagatta2019survey} are our starting points.
+Bayesian networks were introduced by Judea Pearl in 1980s~\cite{pearl1985bayesian, pearl1988probabilistic}, as a method to represent probabilistic models graphically, enabling efficient reasoning under uncertainty. Pearl's work established a formal framework using directed acyclic graphs (DAGs) to represent causal relationships and conditional dependencies among variables.
+
+The concept of structure learning in Bayesian networks began with the development of foundational methods for approximating complex probabilistic relationships. Early work by Chow and Liu~\cite{chowliu1968} approximates a joint probability distribution by fitting a dependency tree to observed data using KL-divergence. Pearl extended the concept to more complex structures such as poly-trees (Directed Acyclic Graphs)~\cite{pearl1989recovery}.
+
+As demonstrated by Gregory Cooper in~\cite{cooper1990complexity}, structure learning is NP-hard. To address this, methods that help manage the complexity of structure learning have been introduced. Among these, Heckerman et al.~\cite{heckerman1995learning} proposed score-based methods using the BDeu (Bayes Dirichlet equivalent uniform) as a metric. Other metrics are also widely used, such as BIC (Bayesian Information Criterion) introduced by Schwarz~\cite{schwarz1978estimating}, because of its computational simplicity. Both possess the decomposability property, meaning the overall scoring of the network can be broken down into the sum of the scores for each node given its parent set, thus reducing the problem into smaller subproblems that can be solved using greedy or heuristic algorithms. The process involves producing a list of candidate parent sets for each node and then assigning a parent set to a node by maximizing its score. 
+%insert papers on BDeu (read Suzuki), BIC, MDL..., maybe talk about decomposability that reduce the problem into 2 steps: parent set identification (K2...) and general structure optimization
+
+Other works,  like the PC-algorithm by Spirtes et al.~\cite{spirtes1991algorithm} include constraint-based methods, which rely on testing conditional independence relationships between variables to infer the network structure. In the case of a sparse true underlying DAG, the algorithm's time complexity reduces to polynomial time. Colombo et al.~\cite{colombo2014order} suggested improvement to the algorithm, to make it order-independent. 
+
+Several researchers have explored hybrid approaches that combine both score-based and constraint-based methods. The most commonly used hybrid learning algorithms
+
+Tsamardinos et al~\cite{tsamardinos2006maxmin} 
+
+%Verma & Pearl 1990, PC algo (Spirtes, Glymour and Scheines) and its improvement (Ramsey 2016), (Colombo and Maathuis PC-stable adressing the dependence on order of variables in data) 
+
+%Hybrid learning: combine both score-based and constraint-based (Meek, C., & Heckerman, D. (1997) GES, Tsamardinos 2006 with MMHC, Gasse 2014 H2PC)

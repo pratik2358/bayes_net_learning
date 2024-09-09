@@ -1,1 +1,31 @@
 \section{Methodology}
+\subsection{Learning Methods}
+
+We compare different methods for learning the Bayesian Network structure:
+
+\begin{itemize}
+    \item \textbf{Exact Structure Learning}:
+        \begin{enumerate}
+            \item \textbf{Unbounded max parents}: We used an exact algorithm to learn the network structure without imposing any restriction on the maximum number of parent nodes per variable.
+            \item \textbf{Bounded to 2 max parents}: Here, the exact algorithm was constrained to learning structures where each node has at most two parent nodes.
+        \end{enumerate}
+        
+    \item \textbf{Chow-Liu Approximation}:
+        \begin{itemize}
+            \item In this case, we used the Chow-Liu algorithm~\cite{chowliu1968}, which approximates the Bayesian network structure by learning only one parent per node.
+        \end{itemize}
+\end{itemize}
+
+\subsection{Evaluation Metrics}
+
+We evaluated the learned networks based on the following metrics:
+
+\begin{enumerate}
+    \item \textbf{Structure Accuracy}: The percentage of nodes in the learned Bayesian networks that have the same parent nodes as the initial network. This metric captures the accuracy of the structural learning component by comparing the learned structures to the ground truth network.
+   
+    \item \textbf{KL Divergence of Probability Distributions}: We computed the average Kullback-Leibler (KL) divergence between the probability distributions of variables in the simulated data and those learned from the model. This measures how well the learned network approximates the true probability distributions of individual variables.
+
+    \item \textbf{KL Divergence of Joint Distributions}: We evaluated the average KL divergence between the joint probability distribution in the simulated data and that obtained by sampling from the learned model. This provides an overall measure of how well the learned Bayesian Network represents the joint relationships between variables.
+
+    \item \textbf{KL Divergence of Conditional Probability Distributions}: We also measured the average KL divergence between the conditional probability distributions of all variables from the generated data and the learned model. This allows us to quantify the accuracy of conditional dependencies between variables.
+\end{enumerate}
