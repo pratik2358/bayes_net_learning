@@ -23,3 +23,4 @@ Related Work:
 21. [A survey on Bayesian network structure learning from data (2019)](https://boa.unimib.it/bitstream/10281/231183/4/survey.pdf)
 22. [Who learns better Bayesian network structures: Accuracy and speed of structure learning algorithms (2019)](https://www.sciencedirect.com/science/article/pii/S0888613X19301434)
 23. [A survey of Bayesian Network structure learning (2023)](https://link.springer.com/content/pdf/10.1007/s10462-022-10351-w.pdf)
+24. [Optimal estimation of Gaussian (poly)trees (2024)](https://arxiv.org/pdf/2402.06380)
